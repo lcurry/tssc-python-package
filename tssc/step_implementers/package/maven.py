@@ -68,6 +68,7 @@ Notes
             'pom-path': '{FULL_PATH_TO_POM}'
       }
 """
+import sys
 import os
 import sh
 
@@ -82,6 +83,7 @@ DEFAULT_ARGS = {
     'artifact-extensions': ["jar", "war", "ear"],
     'artifact-parent-dir': 'target'
 }
+
 
 class Maven(StepImplementer):
     """
@@ -114,7 +116,6 @@ class Maven(StepImplementer):
         """
         if 'pom-file' not in step_config or not step_config['pom-file']:
             raise ValueError('Key (pom-file) must have none empty value in the step configuration')
-            #raise ValueError('Key (pom-file) must have none empty value in the step configuration')
 
     def _run_step(self, runtime_step_config):
         pom_file = runtime_step_config['pom-file']
@@ -128,29 +129,36 @@ class Maven(StepImplementer):
         group_id = get_xml_element(pom_file, 'groupId').text
 
         try:
-            sh.mvn('clean', 'install', '-f', pom_file) # pylint: disable=no-member
+            print(
+                sh.mvn(  # pylint: disable=no-member,
+                    'clean',
+                    'install',
+                    '-f', pom_file,
+                    _out=sys.stdout
+                )
+            )
         except sh.ErrorReturnCode as error:
-            raise RuntimeError("Error invoking mvn: {0}".format(str(error)))
+            raise RuntimeError("Error invoking mvn: {error}".format(error=error))
 
         # find the artifacts
-        artfiact_file_names = []
+        artifact_file_names = []
         artifact_parent_dir_full_path = \
             os.listdir(os.path.join(
                 os.path.dirname(os.path.abspath(pom_file)),
                 artifact_parent_dir))
         for filename in artifact_parent_dir_full_path:
             if any(filename.endswith(ext) for ext in artifact_extensions):
-                artfiact_file_names.append(filename)
+                artifact_file_names.append(filename)
 
         # error if we find more then one artifact
         # see https://projects.engineering.redhat.com/browse/NAPSSPO-546
-        if len(artfiact_file_names) > 1:
+        if len(artifact_file_names) > 1:
             raise ValueError(
                 'pom resulted in multiple artifacts with expected artifact extensions ' +
                 '({artifact_extensions}), this is unsupported'.format(
                     artifact_extensions=artifact_extensions))
 
-        if len(artfiact_file_names) < 1:
+        if len(artifact_file_names) < 1:
             raise ValueError(
                 'pom resulted in 0 with expected artifact extensions ' +
                 '({artifact_extensions}), this is unsupported'.format(
@@ -164,10 +172,10 @@ class Maven(StepImplementer):
             package_type = 'jar'
 
         results = {
-            'artifacts' : [{
+            'artifacts': [{
                 'path': os.path.join(
                     os.path.dirname(os.path.abspath(pom_file)),
-                    artifact_parent_dir, artfiact_file_names[0]
+                    artifact_parent_dir, artifact_file_names[0]
                 ),
                 'artifact-id': artifact_id,
                 'group-id': group_id,
@@ -176,6 +184,7 @@ class Maven(StepImplementer):
             }]
         }
         return results
+
 
 # register step implementer
 TSSCFactory.register_step_implementer(Maven)

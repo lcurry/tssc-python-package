@@ -15,6 +15,7 @@ OPTIONAL_ARGS = {
     'password': None
 }
 
+
 class Maven(StepImplementer):
     """
     StepImplementer for the push-artifacts step for Maven.
@@ -42,9 +43,9 @@ class Maven(StepImplementer):
     @staticmethod
     def _validate_runtime_step_config(runtime_step_config):
         if not all(element in runtime_step_config for element in OPTIONAL_ARGS) \
-          and any(element in runtime_step_config for element in OPTIONAL_ARGS):
-            raise ValueError('Either user or password is not set. Neither ' \
-              'or both must be set.')
+                and any(element in runtime_step_config for element in OPTIONAL_ARGS):
+            raise ValueError('Either user or password is not set. Neither '
+                             'or both must be set.')
 
     def _run_step(self, runtime_step_config):
         user = ''
@@ -55,23 +56,23 @@ class Maven(StepImplementer):
         self._validate_runtime_step_config(runtime_step_config)
 
         if any(element in runtime_step_config for element in OPTIONAL_ARGS):
-            if(runtime_step_config.get('user') \
-              and runtime_step_config.get('password')):
+            if (runtime_step_config.get('user')
+                    and runtime_step_config.get('password')):
                 user = runtime_step_config.get('user')
                 password = runtime_step_config.get('password')
 
         # ----- get generate-metadata items
         # Required: Get the generate-metadata.version
-        if(self.get_step_results('generate-metadata') and \
-          self.get_step_results('generate-metadata').get('version')):
+        if (self.get_step_results('generate-metadata') and
+                self.get_step_results('generate-metadata').get('version')):
             version = self.get_step_results('generate-metadata')['version']
         else:
             raise ValueError('Severe error: Generate-metadata does not have a version')
 
         # ----- get package items this will change
         # Required: Get the package.artifacts
-        if(self.get_step_results('package') and \
-          self.get_step_results('package').get('artifacts')):
+        if (self.get_step_results('package') and
+                self.get_step_results('package').get('artifacts')):
             artifacts = self.get_step_results('package')['artifacts']
         else:
             raise ValueError('Severe error: Package does not have artifacts')
@@ -89,7 +90,7 @@ class Maven(StepImplementer):
         </settings>''')
 
         results = {
-            'artifacts' : []
+            'artifacts': []
         }
 
         for artifact in artifacts:
@@ -104,32 +105,34 @@ class Maven(StepImplementer):
                 # https://maven.apache.org/plugins/maven-deploy-plugin/deploy-file-mojo.html
                 if user == '':
                     print(
-                        sh.mvn('deploy:deploy-file', # pylint: disable=no-member \
-                               '-Dversion='+version,\
-                               '-Durl='+url,\
-                               '-Dfile='+artifact_path,\
-                               '-DgroupId='+group_id,\
-                               '-DartifactId='+artifact_id,\
-                               '-Dpackaging='+package_type,\
-                               '-DrepositoryId=tssc',\
-                               '-s'+settings_path,\
-                               _out=sys.stdout\
+                        sh.mvn(  # pylint: disable=no-member
+                            'deploy:deploy-file',
+                            '-Dversion=' + version,
+                            '-Durl=' + url,
+                            '-Dfile=' + artifact_path,
+                            '-DgroupId=' + group_id,
+                            '-DartifactId=' + artifact_id,
+                            '-Dpackaging=' + package_type,
+                            '-DrepositoryId=tssc',
+                            '-s' + settings_path,
+                            _out=sys.stdout
                         )
                     )
                 else:
                     print(
-                        sh.mvn('deploy:deploy-file', # pylint: disable=no-member \
-                               '-Dversion='+version,\
-                               '-Durl='+url,\
-                               '-Dfile='+artifact_path,\
-                               '-DgroupId='+group_id,\
-                               '-DartifactId='+artifact_id,\
-                               '-Dpackaging='+package_type,\
-                               '-DrepositoryId=tssc',\
-                               '-DrepositoryUser='+user,\
-                               '-DrepositoryPassword='+password,\
-                               '-s'+settings_path,\
-                               _out=sys.stdout\
+                        sh.mvn(  # pylint: disable=no-member
+                            'deploy:deploy-file',
+                            '-Dversion=' + version,
+                            '-Durl=' + url,
+                            '-Dfile=' + artifact_path,
+                            '-DgroupId=' + group_id,
+                            '-DartifactId=' + artifact_id,
+                            '-Dpackaging=' + package_type,
+                            '-DrepositoryId=tssc',
+                            '-DrepositoryUser=' + user,
+                            '-DrepositoryPassword=' + password,
+                            '-s' + settings_path,
+                            _out=sys.stdout
                         )
                     )
 
@@ -137,20 +140,21 @@ class Maven(StepImplementer):
                 raise RuntimeError("Error invoking mvn: {all}".format(all=error))
 
             results['artifacts'].append({
-                'url': url + '/' + \
-                       re.sub(r'\.', '/', group_id) + '/' + \
-                       artifact_id + '/' + \
-                       version  + '/' + \
-                       artifact_id + '-' + \
-                       version  + '.' + \
+                'url': url + '/' +
+                       re.sub(r'\.', '/', group_id) + '/' +
+                       artifact_id + '/' +
+                       version + '/' +
+                       artifact_id + '-' +
+                       version + '.' +
                        package_type,
-                'artifact-id' : artifact_id,
-                'group-id' : group_id,
-                'version' : version,
-                'path' : artifact_path,
+                'artifact-id': artifact_id,
+                'group-id': group_id,
+                'version': version,
+                'path': artifact_path,
             })
 
         return results
+
 
 # register step implementer
 TSSCFactory.register_step_implementer(Maven)
